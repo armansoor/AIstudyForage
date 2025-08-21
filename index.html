@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>BLACKPINK × BABYMONSTER AI Forge</title>
+  <meta name="description" content="BLACKPINK × BABYMONSTER themed AI Study & Creative Forge — runs 100% in your browser. No tokens, no servers." />
+  <link rel="stylesheet" href="styles.css" />
+  <!-- Transformers.js (Xenova) for client-side LLMs / pipelines -->
+  <script defer src="https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js"></script>
+  <!-- d3 for graph -->
+  <script defer src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <!-- pdf.js for local PDF parsing -->
+  <script defer src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+  <!-- app script -->
+  <script defer src="app.js"></script>
+</head>
+<body data-mode="blackpink" class="theme">
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">🎤</div>
+      <div>
+        <h1>BLACKPINK × BABYMONSTER AI Forge</h1>
+        <p class="tag">Study • Create • Remix — all in your browser</p>
+      </div>
+    </div>
+
+    <div class="controls">
+      <select id="presetTheme" title="Theme preset">
+        <option value="blackpink">BLACKPINK</option>
+        <option value="babymonster">BABYMONSTER</option>
+      </select>
+      <button id="toggleTheme" class="btn ghost" title="Toggle light/dark">🌗</button>
+      <button id="clearCache" class="btn ghost" title="Clear cached models">🧹 Clear Cache</button>
+      <button id="exportAll" class="btn primary" title="Export notes/quiz">⬇ Export</button>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Main tabs">
+    <button class="tab active" data-tab="capture">Capture</button>
+    <button class="tab" data-tab="documents">Documents</button>
+    <button class="tab" data-tab="summary">Summary</button>
+    <button class="tab" data-tab="graph">Topic Graph</button>
+    <button class="tab" data-tab="search">Semantic Search</button>
+    <button class="tab" data-tab="quiz">Quiz & Flashcards</button>
+    <button class="tab" data-tab="about">About</button>
+  </nav>
+
+  <main class="container">
+    <!-- CAPTURE -->
+    <section id="capture" class="panel active" aria-labelledby="tab-capture">
+      <div class="panel-head">
+        <h2>🎙️ Capture</h2>
+        <p class="muted">Record or upload audio. Transcription is local (Whisper tiny).</p>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3>Live Record</h3>
+          <div class="row gap">
+            <button id="recToggle" class="btn">🎤 Start Recording</button>
+            <button id="transcribeRec" class="btn">Transcribe Recording</button>
+          </div>
+          <audio id="recAudio" controls class="wide"></audio>
+          <p class="muted small">Tip: stop recording before transcribing. First transcription downloads model.</p>
+        </div>
+
+        <div class="card">
+          <h3>Upload Audio</h3>
+          <input id="audioFile" type="file" accept="audio/*" />
+          <div class="row gap">
+            <button id="transcribeFile" class="btn">Transcribe File</button>
+            <button id="playFile" class="btn ghost">Play</button>
+          </div>
+          <audio id="fileAudio" controls class="wide"></audio>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Transcript</h3>
+        <textarea id="transcript" rows="8" placeholder="Transcription appears here..." ></textarea>
+        <div class="row wrap gap">
+          <button id="splitChunks" class="btn">Chunk Transcript</button>
+          <button id="exportSRT" class="btn ghost">Export SRT</button>
+          <span id="chunkInfo" class="muted"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- DOCUMENTS -->
+    <section id="documents" class="panel" aria-labelledby="tab-docs">
+      <div class="panel-head">
+        <h2>📄 Documents</h2>
+        <p class="muted">Upload PDFs (parsed with pdf.js) and merge with transcripts into a notebook.</p>
+      </div>
+
+      <div class="card">
+        <h3>Add PDFs</h3>
+        <input id="pdfFiles" type="file" accept="application/pdf" multiple />
+        <div id="pdfList" class="list"></div>
+      </div>
+
+      <div class="card">
+        <h3>Notebook</h3>
+        <textarea id="notebook" rows="10" placeholder="Notebook will contain merged transcripts + extracted PDF text..."></textarea>
+        <div class="row gap">
+          <button id="summarizeNotes" class="btn">Summarize Notes</button>
+          <button id="embedNotes" class="btn">Build Embeddings</button>
+          <span id="embedStatus" class="muted"></span>
+        </div>
+        <pre id="summaryOut" class="out"></pre>
+      </div>
+    </section>
+
+    <!-- SUMMARY -->
+    <section id="summary" class="panel">
+      <div class="panel-head">
+        <h2>🧾 Summary</h2>
+        <p class="muted">Summarize the notebook or any selected text.</p>
+      </div>
+
+      <textarea id="sumInput" rows="8" placeholder="Paste or select text to summarize..."></textarea>
+      <div class="row gap">
+        <label class="inline">Min <input id="sumMin" type="number" value="40" min="10" max="300" /></label>
+        <label class="inline">Max <input id="sumMax" type="number" value="160" min="32" max="600" /></label>
+        <button id="sumRun" class="btn primary">Summarize</button>
+      </div>
+      <pre id="sumOut" class="out"></pre>
+    </section>
+
+    <!-- TOPIC GRAPH -->
+    <section id="graph" class="panel">
+      <div class="panel-head">
+        <h2>🕸️ Topic Graph</h2>
+        <p class="muted">Visualize keyword co-occurrence. Drag nodes, export PNG.</p>
+      </div>
+
+      <div class="row gap">
+        <label class="inline">Top keywords <input id="kwCount" type="number" value="30" min="10" max="120" /></label>
+        <button id="buildGraph" class="btn">Build Graph</button>
+        <button id="downloadGraph" class="btn ghost">Download Image</button>
+      </div>
+
+      <div class="graph-wrap"><svg id="graphSvg" width="100%" height="520" role="img" aria-label="Topic graph"></svg></div>
+    </section>
+
+    <!-- SEARCH -->
+    <section id="search" class="panel">
+      <div class="panel-head">
+        <h2>🔎 Semantic Search</h2>
+        <p class="muted">Build embeddings and perform semantic search over your notebook.</p>
+      </div>
+
+      <div class="row gap">
+        <input id="searchQuery" type="text" placeholder="Ask a question or search concept…" />
+        <button id="runSearch" class="btn">Search</button>
+      </div>
+      <ol id="searchResults" class="results"></ol>
+    </section>
+
+    <!-- QUIZ -->
+    <section id="quiz" class="panel">
+      <div class="panel-head">
+        <h2>🧩 Quiz & Flashcards</h2>
+        <p class="muted">Generate Q&A pairs for study & export to CSV for Anki/Quizlet.</p>
+      </div>
+
+      <div class="row wrap gap">
+        <label class="inline">Questions <input id="qCount" type="number" value="12" min="3" max="50" /></label>
+        <button id="genQuiz" class="btn primary">Generate Quiz</button>
+        <button id="exportCSV" class="btn ghost">Export CSV</button>
+      </div>
+
+      <div id="quizList" class="list"></div>
+    </section>
+
+    <!-- ABOUT -->
+    <section id="about" class="panel">
+      <div class="panel-head">
+        <h2>About</h2>
+      </div>
+      <div class="prose">
+        <p>This page uses <strong>Transformers.js</strong> to run open-source models inside your browser. Models load from public hosting — no API keys or tokens.</p>
+        <ul>
+          <li><code>Xenova/whisper-tiny.en</code> — speech → text</li>
+          <li><code>Xenova/all-MiniLM-L6-v2</code> — embeddings</li>
+          <li><code>Xenova/distilbart-cnn-6-6</code> — summarization</li>
+          <li><code>Xenova/LaMini-Flan-T5-248M</code> — quiz generation</li>
+        </ul>
+        <p class="muted">Performance depends on your device and browser. Desktop with WebGPU is fastest; otherwise WASM is used.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="foot-inner">
+      <span>Made with ♡ for BLINKs & MONSTERS — 100% client-side</span>
+      <span class="muted small">First model runs download weights (may take time over slow networks).</span>
+    </div>
+  </footer>
+
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+</body>
+</html>
