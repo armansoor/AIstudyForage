@@ -384,7 +384,7 @@ function buildD3Graph(text, keywords){
     .on('drag', (e,d)=>{ d.fx = e.x; d.fy = e.y; })
     .on('end', (e,d)=>{ if(!e.active) sim.alphaTarget(0); d.fx = null; d.fy = null; }));
 
-  node.append('circle').attr('r', 10).attr('fill', 'url(#grad)').attr('stroke', 'rgba(255,255,255,0.1)').attr('stroke-width',1.2);
+  node.append('circle').attr('r', 10).attr('fill', '#ff3aa6').attr('stroke', 'rgba(255,255,255,0.1)').attr('stroke-width',1.2);
   node.append('text').text(d=>d.label).attr('x',14).attr('y',4).style('fill','#f1f5fb').style('font-size','12px');
 
   sim.on('tick', ()=>{
